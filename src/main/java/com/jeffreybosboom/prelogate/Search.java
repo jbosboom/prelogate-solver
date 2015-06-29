@@ -68,7 +68,6 @@ public final class Search {
 		LaserDirection[][] prev = new LaserDirection[devices.size()][], next = new LaserDirection[devices.size()][];
 		for (int i = 0; i < prev.length; ++i) {
 			prev[i] = new LaserDirection[devices.get(i).size()];
-			Arrays.fill(prev[i], LaserDirection.make(false, false, false, false));
 			next[i] = prev[i].clone();
 		}
 
