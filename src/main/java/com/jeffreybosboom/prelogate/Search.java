@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -64,36 +65,37 @@ public final class Search {
 
 	private static final int QUIESCENCE_TICKS = 100;
 	private boolean evaluate(List<List<Device>> devices) {
-		ArrayList<ArrayList<LaserDirection>> prev = new ArrayList<>(), next = new ArrayList<>();
-		for (List<Device> d : devices) {
-			prev.add(new ArrayList<>(Collections.nCopies(d.size(), LaserDirection.make(false, false, false, false))));
-			next.add(new ArrayList<>(Collections.nCopies(d.size(), LaserDirection.make(false, false, false, false))));
+		LaserDirection[][] prev = new LaserDirection[devices.size()][], next = new LaserDirection[devices.size()][];
+		for (int i = 0; i < prev.length; ++i) {
+			prev[i] = new LaserDirection[devices.get(i).size()];
+			Arrays.fill(prev[i], LaserDirection.make(false, false, false, false));
+			next[i] = prev[i].clone();
 		}
 
 		for (int ttr = 0; ttr < problem.terminals().get(0).values().size(); ++ttr) {
-			for (ArrayList<LaserDirection> n : next)
-				Collections.copy(n, Collections.nCopies(n.size(), LaserDirection.make(false, false, false, false)));
+			for (LaserDirection[] n : next)
+				Arrays.fill(n, LaserDirection.make(false, false, false, false));
 			enforceEmitters(next, ttr);
 
 			int ticks = 0;
 			do {
-				ArrayList<ArrayList<LaserDirection>> swaptemp = prev;
+				LaserDirection[][] swaptemp = prev;
 				prev = next;
 				next = swaptemp;
 
-				for (int r = 0; r < next.size(); ++r)
-					for (int c = 0; c < next.get(r).size(); ++c) {
+				for (int r = 0; r < next.length; ++r)
+					for (int c = 0; c < next[r].length; ++c) {
 						//TODO: we can get rid of the boundary of walls if we're
 						//willing to check emitters in the loop.
 						LaserDirection input = LaserDirection.make(getInput(prev, r, c, Direction.UP),
 								getInput(prev, r, c, Direction.RIGHT),
 								getInput(prev, r, c, Direction.DOWN),
 								getInput(prev, r, c, Direction.LEFT));
-						next.get(r).set(c, devices.get(r).get(c).operate(input));
+						next[r][c] = devices.get(r).get(c).operate(input);
 					}
 
 				enforceEmitters(next, ttr);
-			} while (!prev.equals(next) && ++ticks < QUIESCENCE_TICKS);
+			} while (!Arrays.deepEquals(prev, next) && ++ticks < QUIESCENCE_TICKS);
 			if (ticks >= QUIESCENCE_TICKS)
 				return false; //did not quiesce
 			if (!checkReceivers(next, ttr))
@@ -103,27 +105,27 @@ public final class Search {
 		return true;
 	}
 
-	private static boolean getInput(ArrayList<ArrayList<LaserDirection>> state, int r, int c, Direction d) {
+	private static boolean getInput(LaserDirection[][] state, int r, int c, Direction d) {
 		switch (d) {
 			case UP:
-				return (r - 1) < 0 ? false : state.get(r-1).get(c).down();
+				return (r - 1) < 0 ? false : state[r-1][c].down();
 			case RIGHT:
-				return (c + 1) >= state.get(r).size() ? false : state.get(r).get(c+1).left();
+				return (c + 1) >= state[r].length ? false : state[r][c+1].left();
 			case DOWN:
-				return (r + 1) >= state.size() ? false : state.get(r+1).get(c).up();
+				return (r + 1) >= state.length ? false : state[r+1][c].up();
 			case LEFT:
-				return (c - 1) < 0 ? false : state.get(r).get(c-1).right();
+				return (c - 1) < 0 ? false : state[r][c-1].right();
 		}
 		throw new AssertionError("unreachable");
 	}
 
-	private void enforceEmitters(ArrayList<ArrayList<LaserDirection>> state, int ttr) {
+	private void enforceEmitters(LaserDirection[][] state, int ttr) {
 		for (Terminal t : problem.terminals())
 			if (t.isEmitter())
-				state.get(t.row()).set(t.col(), state.get(t.row()).get(t.col()).set(t.dir(), t.values().get(ttr)));
+				state[t.row()][t.col()] = state[t.row()][t.col()].set(t.dir(), t.values().get(ttr));
 	}
 
-	private boolean checkReceivers(ArrayList<ArrayList<LaserDirection>> state, int ttr) {
+	private boolean checkReceivers(LaserDirection[][] state, int ttr) {
 		for (Terminal t : problem.terminals())
 			if (t.isReceiver())
 				if (getInput(state, t.row(), t.col(), t.dir()) != t.values().get(ttr))
