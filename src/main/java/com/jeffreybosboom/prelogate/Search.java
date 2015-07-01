@@ -54,6 +54,7 @@ public final class Search {
 		Map<Coordinate, Set<Device>> devices = new HashMap<>();
 		input.forEach((k, v) -> devices.put(k, new HashSet<>(v)));
 		pruneAllOutputsFaceWalls(devices);
+		pruneNoInputFromEmitter(devices);
 		pruneNoOutputToReceiver(devices);
 		return devices;
 	}
@@ -88,7 +89,7 @@ public final class Search {
 				}
 			});
 			if (!toBeRemoved.isEmpty()) {
-				System.out.println("pruned "+toBeRemoved+" from "+c);
+				System.out.println("pruneAllOutputsFaceWalls: pruned "+toBeRemoved+" from "+c);
 				s.removeAll(toBeRemoved);
 				toBeRemoved.clear();
 			}
@@ -106,10 +107,38 @@ public final class Search {
 			if (p == null) return;
 			List<Device> toBeRemoved = p.stream().filter(d -> !d.outputs().contains(t.dir().opposite())).collect(Collectors.toList());
 			if (!toBeRemoved.isEmpty()) {
-				System.out.println("pruned "+toBeRemoved+" from "+neighbor);
+				System.out.println("pruneNoOutputToReceiver: pruned "+toBeRemoved+" from "+neighbor);
 				p.removeAll(toBeRemoved);
 			}
 		});
+	}
+
+	private void pruneNoInputFromEmitter(Map<Coordinate, Set<Device>> devices) {
+		//Devices adjacent to an emitter in the emitter's direction must have
+		//at least one of their inputs facing the emitter if there is a truth
+		//table row where only that emitter is true and any receiver is true.
+		emitters.forEach((r, t) -> {
+			if (!emitterMustFlow(t)) return;
+			Coordinate neighbor = r.translate(t.dir());
+			Set<Device> p = devices.get(neighbor);
+			if (p == null) return;
+			List<Device> toBeRemoved = p.stream().filter(d -> !d.inputs().contains(t.dir().opposite())).collect(Collectors.toList());
+			if (!toBeRemoved.isEmpty()) {
+				System.out.println("pruneNoInputFromEmitter: pruned "+toBeRemoved+" from "+neighbor);
+				p.removeAll(toBeRemoved);
+			}
+		});
+	}
+
+	private boolean emitterMustFlow(Terminal emitter) {
+		for (int ttr = 0; ttr < truthTableRows; ++ttr) {
+			int finalttr = ttr;
+			if (!emitter.values().get(ttr)) continue;
+			if (emitters.values().stream().filter(e -> e != emitter).anyMatch(e -> e.values().get(finalttr))) continue;
+			if (receivers.values().stream().noneMatch(r -> r.values().get(finalttr))) continue;
+			return true;
+		}
+		return false;
 	}
 
 	private static boolean basedOn(Device d, BasicDevice b) {
