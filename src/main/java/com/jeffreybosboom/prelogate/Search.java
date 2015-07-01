@@ -1,5 +1,6 @@
 package com.jeffreybosboom.prelogate;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
@@ -10,7 +11,9 @@ import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,10 +27,17 @@ public final class Search {
 	private final Problem problem;
 	private final List<SetMultimap<Integer, List<Device>>> materializedRows = new ArrayList<>();
 	private final List<int[]> partitions = new ArrayList<>();
+	private final ImmutableMap<Coordinate, Terminal> emitters, receivers;
 	public Search(Problem problem, int deviceCount) {
 		this.problem = problem;
+		ImmutableMap.Builder<Coordinate, Terminal> eb = ImmutableMap.builder(), rb = ImmutableMap.builder();
+		problem.terminals().forEach(t -> (t.isEmitter() ? eb : rb).put(t.coord(), t));
+		this.emitters = eb.build();
+		this.receivers = rb.build();
+
+		Map<Coordinate, Set<Device>> devices = prune(problem.devices());
 		Map<List<Set<Device>>, SetMultimap<Integer, List<Device>>> materializationSharing = new HashMap<>();
-		for (List<Set<Device>> row : devicesAsGrid(problem.devices())) {
+		for (List<Set<Device>> row : devicesAsGrid(devices)) {
 			SetMultimap<Integer, List<Device>> materialization = materializationSharing.get(row);
 			if (materialization == null) {
 				materialization = ImmutableSetMultimap.copyOf(Multimaps.index(Sets.cartesianProduct(row),
@@ -37,6 +47,54 @@ public final class Search {
 			materializedRows.add(materialization);
 		}
 		buildPartitions(deviceCount, 0, new ArrayDeque<>(materializedRows.size()), partitions);
+	}
+
+	private Map<Coordinate, Set<Device>> prune(Map<Coordinate, Set<Device>> input) {
+		Map<Coordinate, Set<Device>> devices = new HashMap<>();
+		input.forEach((k, v) -> devices.put(k, new HashSet<>(v)));
+		pruneAllOutputsFaceWalls(devices);
+		return devices;
+	}
+
+	private void pruneAllOutputsFaceWalls(Map<Coordinate, Set<Device>> device) {
+		List<Device> toBeRemoved = new ArrayList<>();
+		Set<BasicDevice> justWall = EnumSet.of(BasicDevice.WALL);
+		device.forEach((c, s) -> {
+			if (s.contains(BasicDevice.WALL)) return;
+			s.forEach(d -> {
+				if (d.outputs().stream().anyMatch(d.inputs()::contains)) {
+					//empty, mirror, splitter, diffuser, if
+					int outputsFacingWalls = (int)d.outputs().stream()
+						.filter(o -> device.get(c.translate(o)).equals(justWall)
+								&& !receivers.containsKey(c.translate(o))
+								&& !emitters.containsKey(c.translate(o))
+						).count();
+					if ((basedOn(d, BasicDevice.MIRROR) || basedOn(d, BasicDevice.IF)) && outputsFacingWalls >= 1)
+						toBeRemoved.add(d);
+					else if ((basedOn(d, BasicDevice.SPLITTER) || basedOn(d, BasicDevice.DIFFUSER)) && outputsFacingWalls >= 3)
+						toBeRemoved.add(d);
+					//can't remove empty if we're using device-count-limited search
+				} else {
+					//and, or, xor
+					int outputsFacingWalls = (int)d.outputs().stream()
+						.filter(o -> device.get(c.translate(o)).equals(justWall)
+								&& !receivers.containsKey(c.translate(o))
+								//emitters count as walls when inputs and outputs are disjoint
+						).count();
+					if (outputsFacingWalls >= 1)
+						toBeRemoved.add(d);
+				}
+			});
+			if (!toBeRemoved.isEmpty()) {
+				System.out.println("pruned "+toBeRemoved+" from "+c);
+				s.removeAll(toBeRemoved);
+				toBeRemoved.clear();
+			}
+		});
+	}
+
+	private static boolean basedOn(Device d, BasicDevice b) {
+		return d.equals(b) || (d instanceof RotatedDevice && ((RotatedDevice)d).base().equals(b));
 	}
 
 	private static List<List<Set<Device>>> devicesAsGrid(Map<Coordinate, Set<Device>> devices) {
@@ -132,16 +190,14 @@ public final class Search {
 	}
 
 	private void enforceEmitters(LaserDirection[][] state, int ttr) {
-		for (Terminal t : problem.terminals())
-			if (t.isEmitter())
-				state[t.row()][t.col()] = state[t.row()][t.col()].set(t.dir(), t.values().get(ttr));
+		for (Terminal t : emitters.values())
+			state[t.row()][t.col()] = state[t.row()][t.col()].set(t.dir(), t.values().get(ttr));
 	}
 
 	private boolean checkReceivers(LaserDirection[][] state, int ttr) {
-		for (Terminal t : problem.terminals())
-			if (t.isReceiver())
-				if (getInput(state, t.row(), t.col(), t.dir()) != t.values().get(ttr))
-					return false;
+		for (Terminal t : receivers.values())
+			if (getInput(state, t.row(), t.col(), t.dir()) != t.values().get(ttr))
+				return false;
 		return true;
 	}
 
