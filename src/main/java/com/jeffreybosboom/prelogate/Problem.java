@@ -112,6 +112,9 @@ public final class Problem {
 		public int col() {
 			return rowcol & ((1 << 16) - 1);
 		}
+		public Coordinate coord() {
+			return Coordinate.at(row(), col());
+		}
 		public Direction dir() {
 			return dir;
 		}
