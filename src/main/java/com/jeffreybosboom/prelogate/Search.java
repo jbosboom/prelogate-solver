@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -53,6 +54,7 @@ public final class Search {
 		Map<Coordinate, Set<Device>> devices = new HashMap<>();
 		input.forEach((k, v) -> devices.put(k, new HashSet<>(v)));
 		pruneAllOutputsFaceWalls(devices);
+		pruneNoOutputToReceiver(devices);
 		return devices;
 	}
 
@@ -89,6 +91,23 @@ public final class Search {
 				System.out.println("pruned "+toBeRemoved+" from "+c);
 				s.removeAll(toBeRemoved);
 				toBeRemoved.clear();
+			}
+		});
+	}
+
+	private void pruneNoOutputToReceiver(Map<Coordinate, Set<Device>> devices) {
+		//Devices adjacent to a receiver in the receiver's direction must have
+		//at least one of their outputs facing the receiver if the receiver is
+		//ever true.
+		receivers.forEach((r, t) -> {
+			if (!t.values().contains(true)) return;
+			Coordinate neighbor = r.translate(t.dir());
+			Set<Device> p = devices.get(neighbor);
+			if (p == null) return;
+			List<Device> toBeRemoved = p.stream().filter(d -> !d.outputs().contains(t.dir().opposite())).collect(Collectors.toList());
+			if (!toBeRemoved.isEmpty()) {
+				System.out.println("pruned "+toBeRemoved+" from "+neighbor);
+				p.removeAll(toBeRemoved);
 			}
 		});
 	}
