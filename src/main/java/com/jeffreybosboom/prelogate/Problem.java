@@ -30,20 +30,6 @@ public final class Problem {
 		return devices;
 	}
 
-	public List<List<Set<Device>>> devicesAsGrid() {
-		int rows = devices.keySet().stream().mapToInt(Coordinate::row).max().getAsInt() + 1;
-		List<List<Set<Device>>> playfield = new ArrayList<>(rows);
-		for (int r = 0; r < rows; ++r) {
-			int finalr = r;
-			int cols = devices.keySet().stream().filter(c -> c.row() == finalr).mapToInt(Coordinate::col).max().getAsInt()+1;
-			List<Set<Device>> thisRow = new ArrayList<>(cols);
-			for (int c = 0; c < cols; ++c)
-				thisRow.add(devices.get(Coordinate.at(r, c)));
-			playfield.add(thisRow);
-		}
-		return playfield;
-	}
-
 	public List<Terminal> terminals() {
 		return terminals;
 	}

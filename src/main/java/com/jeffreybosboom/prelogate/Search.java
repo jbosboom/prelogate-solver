@@ -27,7 +27,7 @@ public final class Search {
 	public Search(Problem problem, int deviceCount) {
 		this.problem = problem;
 		Map<List<Set<Device>>, SetMultimap<Integer, List<Device>>> materializationSharing = new HashMap<>();
-		for (List<Set<Device>> row : problem.devicesAsGrid()) {
+		for (List<Set<Device>> row : devicesAsGrid(problem.devices())) {
 			SetMultimap<Integer, List<Device>> materialization = materializationSharing.get(row);
 			if (materialization == null) {
 				materialization = ImmutableSetMultimap.copyOf(Multimaps.index(Sets.cartesianProduct(row),
@@ -37,6 +37,20 @@ public final class Search {
 			materializedRows.add(materialization);
 		}
 		buildPartitions(deviceCount, 0, new ArrayDeque<>(materializedRows.size()), partitions);
+	}
+
+	private static List<List<Set<Device>>> devicesAsGrid(Map<Coordinate, Set<Device>> devices) {
+		int rows = devices.keySet().stream().mapToInt(Coordinate::row).max().getAsInt() + 1;
+		List<List<Set<Device>>> playfield = new ArrayList<>(rows);
+		for (int r = 0; r < rows; ++r) {
+			int finalr = r;
+			int cols = devices.keySet().stream().filter(c -> c.row() == finalr).mapToInt(Coordinate::col).max().getAsInt()+1;
+			List<Set<Device>> thisRow = new ArrayList<>(cols);
+			for (int c = 0; c < cols; ++c)
+				thisRow.add(devices.get(Coordinate.at(r, c)));
+			playfield.add(thisRow);
+		}
+		return playfield;
 	}
 
 	private void buildPartitions(int target, int index, ArrayDeque<Integer> current, List<int[]> partitions) {
