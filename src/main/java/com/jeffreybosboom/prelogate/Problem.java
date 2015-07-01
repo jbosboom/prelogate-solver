@@ -18,16 +18,30 @@ import java.util.Set;
  * @since 6/27/2015
  */
 public final class Problem {
-	private final List<List<Set<Device>>> devices;
+	private final Map<Coordinate, Set<Device>> devices;
 	private final List<Terminal> terminals;
 
-	public Problem(List<List<Set<Device>>> devices, List<Terminal> terminals) {
+	public Problem(Map<Coordinate, Set<Device>> devices, List<Terminal> terminals) {
 		this.devices = devices;
 		this.terminals = terminals;
 	}
 
-	public List<List<Set<Device>>> devices() {
+	public Map<Coordinate, Set<Device>> devices() {
 		return devices;
+	}
+
+	public List<List<Set<Device>>> devicesAsGrid() {
+		int rows = devices.keySet().stream().mapToInt(Coordinate::row).max().getAsInt() + 1;
+		List<List<Set<Device>>> playfield = new ArrayList<>(rows);
+		for (int r = 0; r < rows; ++r) {
+			int finalr = r;
+			int cols = devices.keySet().stream().filter(c -> c.row() == finalr).mapToInt(Coordinate::col).max().getAsInt()+1;
+			List<Set<Device>> thisRow = new ArrayList<>(cols);
+			for (int c = 0; c < cols; ++c)
+				thisRow.add(devices.get(Coordinate.at(r, c)));
+			playfield.add(thisRow);
+		}
+		return playfield;
 	}
 
 	public List<Terminal> terminals() {
@@ -55,18 +69,16 @@ public final class Problem {
 		}
 		lines.remove(0);
 
-		List<List<Set<Device>>> playfield = new ArrayList<>();
+		Map<Coordinate, Set<Device>> playfield = new HashMap<>();
 		Map<Character, Integer> rowcols = new HashMap<>();
 		int row = 0;
 		for (String line = lines.get(0); !line.isEmpty(); lines.remove(0), line = lines.get(0), ++row) {
-			List<Set<Device>> lineDevices = new ArrayList<>(line.length());
 			for (int col = 0; col < line.length(); ++col) {
 				char c = line.charAt(col);
-				lineDevices.add(deviceMap.get(c));
+				playfield.put(Coordinate.at(row, col), deviceMap.get(c));
 				if (emitterDir.containsKey(c) || receiverDir.containsKey(c))
 					rowcols.put(c, (row << 16) | col);
 			}
-			playfield.add(lineDevices);
 		}
 		lines.remove(0);
 

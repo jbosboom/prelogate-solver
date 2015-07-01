@@ -10,7 +10,6 @@ import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +27,7 @@ public final class Search {
 	public Search(Problem problem, int deviceCount) {
 		this.problem = problem;
 		Map<List<Set<Device>>, SetMultimap<Integer, List<Device>>> materializationSharing = new HashMap<>();
-		for (List<Set<Device>> row : problem.devices()) {
+		for (List<Set<Device>> row : problem.devicesAsGrid()) {
 			SetMultimap<Integer, List<Device>> materialization = materializationSharing.get(row);
 			if (materialization == null) {
 				materialization = ImmutableSetMultimap.copyOf(Multimaps.index(Sets.cartesianProduct(row),
