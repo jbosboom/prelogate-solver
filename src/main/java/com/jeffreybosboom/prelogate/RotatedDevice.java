@@ -35,6 +35,10 @@ public final class RotatedDevice implements Device {
 		return ImmutableSet.copyOf(map.values());
 	}
 
+	public Device base() {
+		return device;
+	}
+
 	@Override
 	public LaserDirection operate(LaserDirection inputs) {
 		return device.operate(inputs.rotateRight(rotationCount)).rotateLeft(rotationCount);
