@@ -1,7 +1,8 @@
 package com.jeffreybosboom.prelogate;
 
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
@@ -41,10 +42,11 @@ public final class Search {
 		for (List<Set<Device>> row : devicesAsGrid(devices)) {
 			SetMultimap<Integer, List<Device>> materialization = materializationSharing.get(row);
 			if (materialization == null) {
-				materialization = ImmutableSetMultimap.copyOf(Multimaps.index(Sets.cartesianProduct(row),
+				materialization = HashMultimap.create(Multimaps.index(Sets.cartesianProduct(row),
 					r -> (int)r.stream().filter(x -> x != BasicDevice.EMPTY && x != BasicDevice.WALL).count()));
 				materializationSharing.put(row, materialization);
 			}
+			materialization.asMap().values().forEach(c -> c.removeIf(this::pruneRow));
 			materializedRows.add(materialization);
 		}
 		buildPartitions(deviceCount, 0, new ArrayDeque<>(materializedRows.size()), partitions);
@@ -130,6 +132,27 @@ public final class Search {
 		});
 	}
 
+	private boolean pruneRow(List<Device> row) {
+		return pruneRowGatesFacingOutputs(row);
+	}
+
+	private boolean pruneRowGatesFacingOutputs(List<Device> row) {
+		for (int i = 0; i < row.size(); ++i) {
+			Device first = row.get(i);
+			if (!basedOn(first, BasicDevice.AND, BasicDevice.OR, BasicDevice.XOR)) continue;
+			for (int j = i+1; j < row.size(); ++j) {
+				Device second = row.get(j);
+				if (second.equals(BasicDevice.EMPTY)) continue;
+				if (basedOn(second, BasicDevice.IF) && second.outputs().contains(Direction.LEFT)) continue; //horizontal if is okay
+				if (!basedOn(second, BasicDevice.AND, BasicDevice.OR, BasicDevice.XOR)) break;
+				if (first.outputs().equals(second.outputs().stream().map(Direction::opposite).collect(Collectors.toSet())))
+					return true;
+				break;
+			}
+		}
+		return false;
+	}
+
 	private boolean emitterMustFlow(Terminal emitter) {
 		for (int ttr = 0; ttr < truthTableRows; ++ttr) {
 			int finalttr = ttr;
@@ -141,8 +164,9 @@ public final class Search {
 		return false;
 	}
 
-	private static boolean basedOn(Device d, BasicDevice b) {
-		return d.equals(b) || (d instanceof RotatedDevice && ((RotatedDevice)d).base().equals(b));
+	private static boolean basedOn(Device d, BasicDevice first, BasicDevice... more) {
+		return Lists.asList(first, more).stream()
+				.anyMatch(b -> d.equals(b) || (d instanceof RotatedDevice && ((RotatedDevice)d).base().equals(b)));
 	}
 
 	private static List<List<Set<Device>>> devicesAsGrid(Map<Coordinate, Set<Device>> devices) {
