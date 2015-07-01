@@ -24,16 +24,16 @@ import java.util.Set;
  * @since 6/28/2015
  */
 public final class Search {
-	private final Problem problem;
 	private final List<SetMultimap<Integer, List<Device>>> materializedRows = new ArrayList<>();
 	private final List<int[]> partitions = new ArrayList<>();
 	private final ImmutableMap<Coordinate, Terminal> emitters, receivers;
+	private final int truthTableRows;
 	public Search(Problem problem, int deviceCount) {
-		this.problem = problem;
 		ImmutableMap.Builder<Coordinate, Terminal> eb = ImmutableMap.builder(), rb = ImmutableMap.builder();
 		problem.terminals().forEach(t -> (t.isEmitter() ? eb : rb).put(t.coord(), t));
 		this.emitters = eb.build();
 		this.receivers = rb.build();
+		this.truthTableRows = problem.terminals().get(0).values().size();
 
 		Map<Coordinate, Set<Device>> devices = prune(problem.devices());
 		Map<List<Set<Device>>, SetMultimap<Integer, List<Device>>> materializationSharing = new HashMap<>();
@@ -142,7 +142,7 @@ public final class Search {
 			next[i] = prev[i].clone();
 		}
 
-		for (int ttr = 0; ttr < problem.terminals().get(0).values().size(); ++ttr) {
+		for (int ttr = 0; ttr < truthTableRows; ++ttr) {
 			for (LaserDirection[] n : next)
 				Arrays.fill(n, LaserDirection.make(false, false, false, false));
 			enforceEmitters(next, ttr);
