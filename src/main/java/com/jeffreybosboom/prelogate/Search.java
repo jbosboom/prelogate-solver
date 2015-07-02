@@ -211,12 +211,16 @@ public final class Search {
 	}
 
 	public void search() {
-		partitions.parallelStream().flatMap(p -> {
-			List<Set<List<Device>>> rowChoices = new ArrayList<>();
-			for (int i = 0; i < materializedRows.size(); ++i)
-				rowChoices.add(materializedRows.get(i).get(p[i]));
-			return Sets.cartesianProduct(rowChoices).stream();
-		}).filter(this::evaluate).forEach(System.out::println);
+		List<List<List<Device>>> solutions = partitions.parallelStream()
+				.flatMap(p -> {
+					List<Set<List<Device>>> rowChoices = new ArrayList<>();
+					for (int i = 0; i < materializedRows.size(); ++i)
+						rowChoices.add(materializedRows.get(i).get(p[i]));
+					return Sets.cartesianProduct(rowChoices).stream();
+				}).filter(this::evaluate)
+				.peek(System.out::println)
+				.collect(Collectors.toList());
+		System.out.println(solutions.size());
 	}
 
 	private static final int QUIESCENCE_TICKS = 100;
