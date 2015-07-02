@@ -1,7 +1,7 @@
 package com.jeffreybosboom.prelogate;
 
 import com.google.common.collect.ImmutableSet;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,7 +26,7 @@ public final class RotatedDevice implements Device {
 
 	public static ImmutableSet<Device> from(BasicDevice base) {
 		if (base == BasicDevice.EMPTY) return ImmutableSet.of(base);
-		Map<List<LaserDirection>, Device> map = new HashMap<>();
+		Map<List<LaserDirection>, Device> map = new LinkedHashMap<>();
 		map.put(LaserDirection.all().map(base::operate).collect(Collectors.toList()), base);
 		for (byte i = 1; i <= 3; ++i) {
 			RotatedDevice d = new RotatedDevice(base, i);
