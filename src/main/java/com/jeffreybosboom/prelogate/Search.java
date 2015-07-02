@@ -70,10 +70,15 @@ public final class Search {
 				if (d.outputs().stream().anyMatch(d.inputs()::contains)) {
 					//empty, mirror, splitter, diffuser, if
 					int outputsFacingWalls = (int)d.outputs().stream()
-						.filter(o -> device.get(c.translate(o)).equals(justWall)
-								&& !receivers.containsKey(c.translate(o))
-								&& !emitters.containsKey(c.translate(o))
-						).count();
+						.filter(o -> {
+							Coordinate neighbor = c.translate(o);
+							//ignore known-empty cells, as they don't affect the beam
+							while (EnumSet.of(BasicDevice.EMPTY).equals(device.get(neighbor)))
+								neighbor = neighbor.translate(o);
+							return device.get(neighbor).equals(justWall)
+								&& !receivers.containsKey(neighbor)
+								&& !emitters.containsKey(neighbor);
+						}).count();
 					if ((basedOn(d, BasicDevice.MIRROR) || basedOn(d, BasicDevice.IF)) && outputsFacingWalls >= 1)
 						toBeRemoved.add(d);
 					else if ((basedOn(d, BasicDevice.SPLITTER) || basedOn(d, BasicDevice.DIFFUSER)) && outputsFacingWalls >= 3)
@@ -82,10 +87,15 @@ public final class Search {
 				} else {
 					//and, or, xor
 					int outputsFacingWalls = (int)d.outputs().stream()
-						.filter(o -> device.get(c.translate(o)).equals(justWall)
-								&& !receivers.containsKey(c.translate(o))
+						.filter(o -> {
+							Coordinate neighbor = c.translate(o);
+							//ignore known-empty cells, as they don't affect the beam
+							while (EnumSet.of(BasicDevice.EMPTY).equals(device.get(neighbor)))
+								neighbor = neighbor.translate(o);
+							return device.get(neighbor).equals(justWall)
+								&& !receivers.containsKey(neighbor);
 								//emitters count as walls when inputs and outputs are disjoint
-						).count();
+						}).count();
 					if (outputsFacingWalls >= 1)
 						toBeRemoved.add(d);
 				}
