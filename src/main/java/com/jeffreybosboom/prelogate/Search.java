@@ -122,6 +122,9 @@ public final class Search {
 		emitters.forEach((r, t) -> {
 			if (!emitterMustFlow(t)) return;
 			Coordinate neighbor = r.translate(t.dir());
+			//ignore known-empty cells, as they don't affect the beam
+			while (EnumSet.of(BasicDevice.EMPTY).equals(devices.get(neighbor)))
+				neighbor = neighbor.translate(t.dir());
 			Set<Device> p = devices.get(neighbor);
 			if (p == null) return;
 			List<Device> toBeRemoved = p.stream().filter(d -> !d.inputs().contains(t.dir().opposite())).collect(Collectors.toList());
