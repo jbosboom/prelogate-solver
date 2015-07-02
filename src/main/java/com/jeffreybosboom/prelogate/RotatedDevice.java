@@ -68,8 +68,4 @@ public final class RotatedDevice implements Device {
 	public String toString() {
 		return String.format("%sr%d", device, rotationCount);
 	}
-
-	public static void main(String[] args) {
-		System.out.println(RotatedDevice.from(BasicDevice.EMPTY));
-	}
 }
