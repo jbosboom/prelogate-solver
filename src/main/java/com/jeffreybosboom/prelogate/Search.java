@@ -146,7 +146,8 @@ public final class Search {
 	}
 
 	private boolean pruneRow(List<Device> row) {
-		return pruneRowGatesFacingOutputs(row);
+		return pruneRowGatesFacingOutputs(row) ||
+				pruneUselessSplitterDiffuser(row);
 	}
 
 	private boolean pruneRowGatesFacingOutputs(List<Device> row) {
@@ -162,6 +163,25 @@ public final class Search {
 					return true;
 				break;
 			}
+		}
+		return false;
+	}
+
+	private boolean pruneUselessSplitterDiffuser(List<Device> row) {
+		//A splitter or diffuser between two opposing devices with no inputs or
+		//outputs facing the splitter/diffuser is useless.
+		for (int i = 0; i < row.size(); ++i) {
+			if (!basedOn(row.get(i), BasicDevice.SPLITTER, BasicDevice.DIFFUSER)) continue;
+			int l, r;
+			for (l = i-1; l >= 0; --l)
+				if (!row.get(l).equals(BasicDevice.EMPTY)) break;
+			for (r = i+1; r < row.size(); ++r)
+				if (!row.get(r).equals(BasicDevice.EMPTY)) break;
+			if (l < 0 || r >= row.size()) continue;
+			Device left = row.get(l), right = row.get(r);
+			if (!left.inputs().contains(Direction.RIGHT) && !left.outputs().contains(Direction.RIGHT) &&
+					!right.inputs().contains(Direction.LEFT) && !right.outputs().contains(Direction.LEFT))
+				return true;
 		}
 		return false;
 	}
