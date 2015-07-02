@@ -69,7 +69,7 @@ public final class Search {
 			s.forEach(d -> {
 				if (d.outputs().stream().anyMatch(d.inputs()::contains)) {
 					//empty, mirror, splitter, diffuser, if
-					int outputsFacingWalls = (int)d.outputs().stream()
+					List<Direction> outputsFacingWalls = d.outputs().stream()
 						.filter(o -> {
 							Coordinate neighbor = c.translate(o);
 							//ignore known-empty cells, as they don't affect the beam
@@ -78,10 +78,12 @@ public final class Search {
 							return device.get(neighbor).equals(justWall)
 								&& !receivers.containsKey(neighbor)
 								&& !emitters.containsKey(neighbor);
-						}).count();
-					if ((basedOn(d, BasicDevice.MIRROR) || basedOn(d, BasicDevice.IF)) && outputsFacingWalls >= 1)
+						}).collect(Collectors.toList());
+					if ((basedOn(d, BasicDevice.MIRROR) || basedOn(d, BasicDevice.IF)) && outputsFacingWalls.size() >= 1)
 						toBeRemoved.add(d);
-					else if ((basedOn(d, BasicDevice.SPLITTER) || basedOn(d, BasicDevice.DIFFUSER)) && outputsFacingWalls >= 3)
+					else if ((basedOn(d, BasicDevice.SPLITTER) || basedOn(d, BasicDevice.DIFFUSER)) &&
+							//three sides, or two non-opposing sides
+							(outputsFacingWalls.size() >= 3 || (outputsFacingWalls.size() == 2 && !outputsFacingWalls.get(0).opposite().equals(outputsFacingWalls.get(1)))))
 						toBeRemoved.add(d);
 					//can't remove empty if we're using device-count-limited search
 				} else {
