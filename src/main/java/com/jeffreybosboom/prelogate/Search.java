@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -38,6 +39,7 @@ public final class Search {
 		this.truthTableRows = problem.terminals().get(0).values().size();
 
 		Map<Coordinate, Set<Device>> devices = prune(problem.devices());
+		devices.forEach((k, v) -> System.out.format("%s: %s%n", k, v));
 		Map<List<Set<Device>>, SetMultimap<Integer, List<Device>>> materializationSharing = new HashMap<>();
 		for (List<Set<Device>> row : devicesAsGrid(devices)) {
 			SetMultimap<Integer, List<Device>> materialization = materializationSharing.get(row);
@@ -53,7 +55,7 @@ public final class Search {
 	}
 
 	private Map<Coordinate, Set<Device>> prune(Map<Coordinate, Set<Device>> input) {
-		Map<Coordinate, Set<Device>> devices = new HashMap<>();
+		Map<Coordinate, Set<Device>> devices = new TreeMap<>();
 		input.forEach((k, v) -> devices.put(k, new HashSet<>(v)));
 		pruneAllOutputsFaceWalls(devices);
 		pruneNoInputFromEmitter(devices);
