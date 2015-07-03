@@ -324,8 +324,9 @@ public final class Search {
 	}
 
 	public static void main(String[] args) throws IOException {
-		Problem problem = Problem.fromFile(Paths.get("Conclusion - Turn.txt"));
-		Search search = new Search(problem, 7);
+		Problem problem = Problem.fromFile(Paths.get(args[0]));
+		Search search = new Search(problem, Integer.valueOf(args[1]));
+		System.out.println(search.countTrials()+" states to check");
 		search.search();
 	}
 }
