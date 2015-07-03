@@ -245,6 +245,17 @@ public final class Search {
 		System.out.println(solutions.size());
 	}
 
+	public long countTrials() {
+		long count = partitions.parallelStream()
+			.mapToLong(p -> {
+				List<Set<List<Device>>> rowChoices = new ArrayList<>();
+				for (int i = 0; i < materializedRows.size(); ++i)
+					rowChoices.add(materializedRows.get(i).get(p[i]));
+				return Sets.cartesianProduct(rowChoices).size();
+			}).sum();
+		return count;
+	}
+
 	private static final int QUIESCENCE_TICKS = 100;
 	private boolean evaluate(List<List<Device>> devices) {
 		LaserDirection[][] prev = new LaserDirection[devices.size()][], next = new LaserDirection[devices.size()][];
