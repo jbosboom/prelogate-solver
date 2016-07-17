@@ -219,8 +219,11 @@ public final class Search {
 	}
 
 	private static boolean basedOn(Device d, BasicDevice first, BasicDevice... more) {
-		return Lists.asList(first, more).stream()
-				.anyMatch(b -> d.equals(b) || (d instanceof RotatedDevice && ((RotatedDevice)d).base().equals(b)));
+		BasicDevice b = d instanceof RotatedDevice ? ((RotatedDevice)d).base() : (BasicDevice)d;
+		if (b == first) return true;
+		for (BasicDevice i : more)
+			if (b == i) return true;
+		return false;
 	}
 
 	private static List<List<Set<Device>>> devicesAsGrid(Map<Coordinate, Set<Device>> devices) {

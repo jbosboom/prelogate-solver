@@ -31,12 +31,10 @@ import java.util.stream.Collectors;
  * @since 6/27/2015
  */
 public final class RotatedDevice implements Device {
-	private final Device device;
+	private final BasicDevice device;
 	private final byte rotationCount;
 	private final Set<Direction> inputs, outputs;
-	public RotatedDevice(Device device, byte rotationCount) {
-		if (device instanceof RotatedDevice)
-			throw new IllegalArgumentException("rotating a rotated device: "+device);
+	public RotatedDevice(BasicDevice device, byte rotationCount) {
 		if (rotationCount <= 0 || rotationCount >= 4)
 			throw new IllegalArgumentException("bad rotation count: "+rotationCount);
 		this.device = device;
@@ -57,7 +55,7 @@ public final class RotatedDevice implements Device {
 		return ImmutableSet.copyOf(map.values());
 	}
 
-	public Device base() {
+	public BasicDevice base() {
 		return device;
 	}
 
