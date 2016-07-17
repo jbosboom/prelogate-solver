@@ -22,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
 public final class RotatedDevice implements Device {
 	private final Device device;
 	private final byte rotationCount;
+	private final Set<Direction> inputs, outputs;
 	public RotatedDevice(Device device, byte rotationCount) {
 		if (device instanceof RotatedDevice)
 			throw new IllegalArgumentException("rotating a rotated device: "+device);
@@ -39,6 +41,9 @@ public final class RotatedDevice implements Device {
 			throw new IllegalArgumentException("bad rotation count: "+rotationCount);
 		this.device = device;
 		this.rotationCount = rotationCount;
+		//cache these so we aren't recomputing all the time
+		this.inputs = Device.super.inputs();
+		this.outputs = Device.super.outputs();
 	}
 
 	public static ImmutableSet<Device> from(BasicDevice base) {
@@ -59,6 +64,14 @@ public final class RotatedDevice implements Device {
 	@Override
 	public LaserDirection operate(LaserDirection inputs) {
 		return device.operate(inputs.rotateLeft(rotationCount)).rotateRight(rotationCount);
+	}
+	@Override
+	public Set<Direction> inputs() {
+		return inputs;
+	}
+	@Override
+	public Set<Direction> outputs() {
+		return outputs;
 	}
 
 	@Override
