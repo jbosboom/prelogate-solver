@@ -17,11 +17,11 @@
  */
 package com.jeffreybosboom.prelogate;
 
-import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
-import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.jeffreybosboom.prelogate.Problem.Terminal;
 import java.io.IOException;
@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
  * @since 6/28/2015
  */
 public final class Search {
-	private final List<SetMultimap<Integer, List<Device>>> materializedRows = new ArrayList<>();
+	private final List<ListMultimap<Integer, ImmutableList<Device>>> materializedRows = new ArrayList<>();
 	private final List<int[]> partitions = new ArrayList<>();
 	private final ImmutableMap<Coordinate, Terminal> emitters, receivers;
 	private final int truthTableRows;
@@ -57,15 +57,27 @@ public final class Search {
 
 		Map<Coordinate, Set<Device>> devices = prune(problem.devices());
 		devices.forEach((k, v) -> System.out.format("%s: %s%n", k, v));
-		Map<List<Set<Device>>, SetMultimap<Integer, List<Device>>> materializationSharing = new HashMap<>();
+
+		//If we have two rows with the same sets of devices, we want to share
+		//their materialized rows.
+		Map<List<Set<Device>>, ListMultimap<Integer, ImmutableList<Device>>> materializationSharing = new HashMap<>();
 		for (List<Set<Device>> row : devicesAsGrid(devices)) {
-			SetMultimap<Integer, List<Device>> materialization = materializationSharing.get(row);
+			ListMultimap<Integer, ImmutableList<Device>> materialization = materializationSharing.get(row);
 			if (materialization == null) {
-				materialization = HashMultimap.create(Multimaps.index(Sets.cartesianProduct(row),
-					r -> (int)r.stream().filter(x -> x != BasicDevice.EMPTY && x != BasicDevice.WALL).count()));
+				materialization = Multimaps.newListMultimap(new DenseIntegerMap<>(deviceCount+1), ArrayList::new);
+				for (List<Device> instance : Sets.cartesianProduct(row)) {
+					if (pruneRow(instance)) continue;
+					int devicesInInstance = 0;
+					for (Device d : instance)
+						if (d != BasicDevice.EMPTY && d != BasicDevice.WALL)
+							++devicesInInstance;
+					materialization.put(devicesInInstance, ImmutableList.copyOf(instance));
+				}
+				//TODO: we used ListMultimap because we know there aren't duplicates
+				//we could assert that by sorting each of materialization.values()
+				//and ensuring all neighbors are distinct
 				materializationSharing.put(row, materialization);
 			}
-			materialization.asMap().values().forEach(c -> c.removeIf(this::pruneRow));
 			materializedRows.add(materialization);
 		}
 		buildPartitions(deviceCount, 0, new ArrayDeque<>(materializedRows.size()), partitions);
@@ -255,12 +267,12 @@ public final class Search {
 	}
 
 	public void search() {
-		List<List<List<Device>>> solutions = partitions.parallelStream()
+		List<List<ImmutableList<Device>>> solutions = partitions.parallelStream()
 				.flatMap(p -> {
-					List<Set<List<Device>>> rowChoices = new ArrayList<>();
+					List<List<ImmutableList<Device>>> rowChoices = new ArrayList<>();
 					for (int i = 0; i < materializedRows.size(); ++i)
 						rowChoices.add(materializedRows.get(i).get(p[i]));
-					return Sets.cartesianProduct(rowChoices).stream();
+					return Lists.cartesianProduct(rowChoices).stream();
 				}).filter(this::evaluate)
 				.peek(System.out::println)
 				.collect(Collectors.toList());
@@ -270,16 +282,16 @@ public final class Search {
 	public long countTrials() {
 		long count = partitions.parallelStream()
 			.mapToLong(p -> {
-				List<Set<List<Device>>> rowChoices = new ArrayList<>();
+				List<List<ImmutableList<Device>>> rowChoices = new ArrayList<>();
 				for (int i = 0; i < materializedRows.size(); ++i)
 					rowChoices.add(materializedRows.get(i).get(p[i]));
-				return Sets.cartesianProduct(rowChoices).size();
+				return Lists.cartesianProduct(rowChoices).size();
 			}).sum();
 		return count;
 	}
 
 	private static final int QUIESCENCE_TICKS = 100;
-	private boolean evaluate(List<List<Device>> devices) {
+	private boolean evaluate(List<ImmutableList<Device>> devices) {
 		LaserDirection[][] prev = new LaserDirection[devices.size()][], next = new LaserDirection[devices.size()][];
 		for (int i = 0; i < prev.length; ++i) {
 			prev[i] = new LaserDirection[devices.get(i).size()];
