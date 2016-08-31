@@ -18,6 +18,7 @@
 package com.jeffreybosboom.prelogate;
 
 import com.google.common.collect.ImmutableSet;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,15 +45,24 @@ public final class RotatedDevice implements Device {
 		this.outputs = Device.super.outputs();
 	}
 
+	private static final EnumMap<BasicDevice, ImmutableSet<Device>> FROM_CACHE = new EnumMap<>(BasicDevice.class);
 	public static ImmutableSet<Device> from(BasicDevice base) {
-		if (base == BasicDevice.EMPTY) return ImmutableSet.of(base);
-		Map<List<LaserDirection>, Device> map = new LinkedHashMap<>();
-		map.put(LaserDirection.all().map(base::operate).collect(Collectors.toList()), base);
-		for (byte i = 1; i <= 3; ++i) {
-			RotatedDevice d = new RotatedDevice(base, i);
-			map.putIfAbsent(LaserDirection.all().map(d::operate).collect(Collectors.toList()), d);
+		ImmutableSet<Device> cached = FROM_CACHE.get(base);
+		if (cached == null) {
+			if (base == BasicDevice.EMPTY)
+				cached = ImmutableSet.of(base);
+			else {
+				Map<List<LaserDirection>, Device> map = new LinkedHashMap<>();
+				map.put(LaserDirection.all().map(base::operate).collect(Collectors.toList()), base);
+				for (byte i = 1; i <= 3; ++i) {
+					RotatedDevice d = new RotatedDevice(base, i);
+					map.putIfAbsent(LaserDirection.all().map(d::operate).collect(Collectors.toList()), d);
+				}
+				cached = ImmutableSet.copyOf(map.values());
+			}
+			FROM_CACHE.put(base, cached);
 		}
-		return ImmutableSet.copyOf(map.values());
+		return cached;
 	}
 
 	public BasicDevice base() {
