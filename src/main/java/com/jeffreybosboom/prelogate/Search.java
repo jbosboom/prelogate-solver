@@ -71,6 +71,7 @@ public final class Search {
 					for (Device d : instance)
 						if (d != BasicDevice.EMPTY && d != BasicDevice.WALL)
 							++devicesInInstance;
+					if (devicesInInstance > deviceCount) continue;
 					materialization.put(devicesInInstance, ImmutableList.copyOf(instance));
 				}
 				//TODO: we used ListMultimap because we know there aren't duplicates
