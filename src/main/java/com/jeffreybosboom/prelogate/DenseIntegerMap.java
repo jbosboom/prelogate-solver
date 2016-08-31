@@ -53,7 +53,7 @@ public final class DenseIntegerMap<V> extends AbstractMap<Integer, V> {
 
 	@Override
 	public Set<Entry<Integer, V>> entrySet() {
-		return new AbstractSet() {
+		return new AbstractSet<Entry<Integer, V>>() {
 			@Override
 			public int size() {
 				//TODO: maybe we need to track size
@@ -65,12 +65,12 @@ public final class DenseIntegerMap<V> extends AbstractMap<Integer, V> {
 			}
 
 			@Override
-			public Iterator iterator() {
+			public Iterator<Entry<Integer, V>> iterator() {
 				int firstNonnullIndex = 0;
 				while (firstNonnullIndex < values.length && get(firstNonnullIndex) == null)
 					++firstNonnullIndex;
 				final int finalFirstNonnullIndex = firstNonnullIndex;
-				return new Iterator<V>() {
+				return new Iterator<Entry<Integer, V>>() {
 					private int nextNonnullIndex = finalFirstNonnullIndex;
 					private int removableIndex = -1;
 					@Override
@@ -79,9 +79,12 @@ public final class DenseIntegerMap<V> extends AbstractMap<Integer, V> {
 					}
 
 					@Override
-					public V next() {
-						V ret = get(nextNonnullIndex);
-						if (ret == null) throw new ConcurrentModificationException("mapping removed during iteration");
+					public Entry<Integer, V> next() {
+						V value = get(nextNonnullIndex);
+						if (value == null) throw new ConcurrentModificationException("mapping removed during iteration");
+						//TODO: not sure if I should return a mutable entry here
+						//and if so, if setValue should mutate the map
+						Entry<Integer, V> ret = new SimpleImmutableEntry<>(nextNonnullIndex, value);
 						removableIndex = nextNonnullIndex;
 						++nextNonnullIndex;
 						while (nextNonnullIndex < values.length && get(nextNonnullIndex) == null)
