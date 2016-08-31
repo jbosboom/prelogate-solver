@@ -231,6 +231,19 @@ public final class Search {
 		return false;
 	}
 
+	private static boolean basedOn(Device d, BasicDevice first) {
+		BasicDevice b = d instanceof RotatedDevice ? ((RotatedDevice)d).base() : (BasicDevice)d;
+		return b == first;
+	}
+	private static boolean basedOn(Device d, BasicDevice first, BasicDevice second) {
+		BasicDevice b = d instanceof RotatedDevice ? ((RotatedDevice)d).base() : (BasicDevice)d;
+		return b == first || b == second;
+	}
+	private static boolean basedOn(Device d, BasicDevice first, BasicDevice second, BasicDevice third) {
+		BasicDevice b = d instanceof RotatedDevice ? ((RotatedDevice)d).base() : (BasicDevice)d;
+		return b == first || b == second || b == third;
+	}
+
 	private static boolean basedOn(Device d, BasicDevice first, BasicDevice... more) {
 		BasicDevice b = d instanceof RotatedDevice ? ((RotatedDevice)d).base() : (BasicDevice)d;
 		if (b == first) return true;
