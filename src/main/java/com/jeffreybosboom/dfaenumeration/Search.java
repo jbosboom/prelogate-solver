@@ -193,7 +193,7 @@ public final class Search {
 				if (second.equals(BasicDevice.EMPTY)) continue;
 				if (basedOn(second, BasicDevice.IF) && second.outputs().contains(Direction.LEFT)) continue; //horizontal if is okay
 				if (!basedOn(second, BasicDevice.AND, BasicDevice.OR, BasicDevice.XOR)) break;
-				if (first.outputs().contains(Direction.RIGHT) && second.outputs().contains(Direction.LEFT))
+				if (first.outputs().equals(second.outputs().stream().map(Direction::opposite).collect(Collectors.toSet())))
 					return true;
 				break;
 			}
